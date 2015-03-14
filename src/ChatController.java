@@ -22,7 +22,7 @@ public class ChatController{
   
     private static int PORT;
     
-	private static String path = "src/conf/system.ini";  
+	private static String path = "system.ini";  
   
     public ChatController() throws IOException {  
   

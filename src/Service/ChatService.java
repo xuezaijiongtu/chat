@@ -14,21 +14,10 @@ import Commons.IniFileUtil;
  * @date 2015-01-24
  * */
 public class ChatService {
-	private static Jedis jedis;
-	private String serverRedisIp;
-	private int serverRedisPort;
-	private String path = "src/conf/system.ini";
+	private Jedis jedis;
 	
-	public ChatService(){
-		try {
-			IniFileUtil ini = new IniFileUtil(path);
-			this.serverRedisIp = ini.readValue("redis", "host");
-			this.serverRedisPort = Integer.parseInt(ini.readValue("redis", "port"));
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		
-		jedis = new Jedis(this.serverRedisIp, this.serverRedisPort);
+	public ChatService(Jedis jedis){
+		this.jedis = jedis;
 	}
 	
 	/**

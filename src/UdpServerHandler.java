@@ -1,3 +1,4 @@
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Map;
 
@@ -6,17 +7,39 @@ import org.apache.mina.core.service.IoHandlerAdapter;
 import org.apache.mina.core.session.IdleStatus;
 import org.apache.mina.core.session.IoSession;
 
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.JedisPoolConfig;
 import Commons.DateTool;
+import Commons.IniFileUtil;
 import Service.ChatService;
 import Service.HeartBeatService;
 
 public class UdpServerHandler extends IoHandlerAdapter {
-
+	private static JedisPool jpool = null;
+	private Jedis jedis;
 	private ChatController server;
-	private ChatService chatService = new ChatService();
+	private String serverRedisIp;
+	private int serverRedisPort;
+	private String path = "system.ini";
+	private ChatService chatService;
 
 	public UdpServerHandler(ChatController server) {
 		this.server = server;
+		try {
+			IniFileUtil ini = new IniFileUtil(path);
+			this.serverRedisIp = ini.readValue("redis", "host");
+			this.serverRedisPort = Integer.parseInt(ini.readValue("redis", "port"));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		if(jpool == null){
+			jpool = new JedisPool(new JedisPoolConfig(), this.serverRedisIp, this.serverRedisPort, 10000);
+		}
+		jedis = jpool.getResource();
+		chatService = new ChatService(jedis);
+
 	}
 
 	@Override
@@ -30,7 +53,7 @@ public class UdpServerHandler extends IoHandlerAdapter {
 		IoBuffer ioBuffer = (IoBuffer)message;   
 	    byte[] dataBytes = new byte[ioBuffer.limit()];
 	    ioBuffer.get(dataBytes);
-	    HeartBeatService heartBeatService = new HeartBeatService();
+	    HeartBeatService heartBeatService = new HeartBeatService(jedis);
 	    String openId = "";  
 	    
 	    String socketHost = ((InetSocketAddress)session.getRemoteAddress()).getHostName();
@@ -38,7 +61,7 @@ public class UdpServerHandler extends IoHandlerAdapter {
 	    InetSocketAddress socketAddress = new InetSocketAddress(socketHost, socketPort);
 		System.out.println(socketAddress + " len: " + dataBytes.length);
 		//当数据包为32个字节时，认为是心跳数据，且数据为openId
-		if(dataBytes.length == 2){
+		if(dataBytes.length == 32){
 	        openId = new String(dataBytes, "utf-8");
 			//回复 对方拒绝通话，0表示拒绝状态,1表示接受，2表示心跳返回，服务器已收到心跳
 			//double num = Math.random();
