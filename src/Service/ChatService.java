@@ -1,12 +1,10 @@
 package Service;
 
-import java.io.IOException;
 import java.net.SocketAddress;
 import java.util.HashMap;
 import java.util.Map;
 
-import redis.clients.jedis.Jedis;
-import Commons.IniFileUtil;
+import com.danga.MemCached.MemCachedClient;
 
 /**
  * 用户通话业务逻辑
@@ -14,24 +12,24 @@ import Commons.IniFileUtil;
  * @date 2015-01-24
  * */
 public class ChatService {
-	private Jedis jedis;
+	private MemCachedClient mc;
 	
-	public ChatService(Jedis jedis){
-		this.jedis = jedis;
+	public ChatService(MemCachedClient mc){
+		this.mc = mc;
 	}
 	
 	/**
 	 * 设置socketAddress与open_id映射关系
 	 * */
-	public String setIpRelationship(SocketAddress socketAddress, String open_id){
-		return jedis.set("relationOfIp_" + socketAddress, open_id);
+	public boolean setIpRelationship(SocketAddress socketAddress, String open_id){
+		return mc.set("chat_relationOfIp_" + socketAddress, open_id);
 	}
 	
 	/**
 	 * 根据ip获取open_id
 	 * */
 	public String getOpenIdByIpRelationship(SocketAddress socketAddress){
-		return jedis.get("relationOfIp_" + socketAddress);
+		return mc.get("chat_relationOfIp_" + socketAddress).toString();
 	}
 	
 	
@@ -39,14 +37,19 @@ public class ChatService {
 	 * 获取通话对象
 	 * */
 	public String getTalkObj(String openId){
-		return jedis.hget("talk_" + openId, "to");
+		return mc.get("chat_talk_" + openId).toString();
 	}
 	
 	/**
 	 * 检查是否存在通话
 	 * */
 	public boolean checkTalk(String openId){
-		return jedis.exists("talk_" + openId);
+		String key = "chat_talk_" + openId;
+		//boolean status = mc.keyExists(key);
+		System.out.println(mc.get(key));
+		System.out.println(key);
+		return true;
+		//return mc.keyExists("chat_talk_" + openId);
 	}
 	
 	/**
@@ -54,8 +57,8 @@ public class ChatService {
 	 * */
 	public Map<String, Object> getTalkObjMsg(String openId){
 		Map<String, Object> data = new HashMap<String, Object>();
-		data.put("host", jedis.hget("online_" + openId, "host"));
-		data.put("port", jedis.hget("online_" + openId, "port"));
+		data.put("host", mc.get("chat_online_" + openId + "_host"));
+		data.put("port", mc.get("chat_online_" + openId + "_port"));
 		return data;
 	}
 }

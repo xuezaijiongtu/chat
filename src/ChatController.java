@@ -10,6 +10,7 @@ import org.apache.mina.transport.socket.DatagramSessionConfig;
 import org.apache.mina.transport.socket.nio.NioDatagramAcceptor;
 
 import Commons.IniFileUtil;
+import Commons.Memcached;
 
 
 /**
@@ -43,7 +44,7 @@ public class ChatController{
         udpSession.setReuseAddress(true);// 设置每一个非主监听连接的端口可以重用  
   
         acceptor.bind(new InetSocketAddress(PORT));  
-        System.out.println("UDPServer listening on port " + PORT);  
+        System.out.println("UDPServer listening on port " + PORT);
     }  
   
     public static void main(String[] args) throws IOException {

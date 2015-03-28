@@ -1,4 +1,3 @@
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Map;
 
@@ -7,38 +6,23 @@ import org.apache.mina.core.service.IoHandlerAdapter;
 import org.apache.mina.core.session.IdleStatus;
 import org.apache.mina.core.session.IoSession;
 
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.JedisPoolConfig;
 import Commons.DateTool;
-import Commons.IniFileUtil;
+import Commons.Memcached;
 import Service.ChatService;
 import Service.HeartBeatService;
 
-public class UdpServerHandler extends IoHandlerAdapter {
-	private static JedisPool jpool = null;
-	private Jedis jedis;
-	private ChatController server;
-	private String serverRedisIp;
-	private int serverRedisPort;
-	private String path = "system.ini";
-	private ChatService chatService;
+import com.danga.MemCached.MemCachedClient;
 
+public class UdpServerHandler extends IoHandlerAdapter {
+	private MemCachedClient mc = Memcached.getClient();
+	private ChatController server;
+	private ChatService chatService;
+    
+    protected MemCachedClient mcc = new MemCachedClient();  
+      
 	public UdpServerHandler(ChatController server) {
 		this.server = server;
-		try {
-			IniFileUtil ini = new IniFileUtil(path);
-			this.serverRedisIp = ini.readValue("redis", "host");
-			this.serverRedisPort = Integer.parseInt(ini.readValue("redis", "port"));
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		
-		if(jpool == null){
-			jpool = new JedisPool(new JedisPoolConfig(), this.serverRedisIp, this.serverRedisPort, 10000);
-		}
-		jedis = jpool.getResource();
-		chatService = new ChatService(jedis);
+		chatService = new ChatService(mc);
 
 	}
 
@@ -53,13 +37,19 @@ public class UdpServerHandler extends IoHandlerAdapter {
 		IoBuffer ioBuffer = (IoBuffer)message;   
 	    byte[] dataBytes = new byte[ioBuffer.limit()];
 	    ioBuffer.get(dataBytes);
-	    HeartBeatService heartBeatService = new HeartBeatService(jedis);
+	    HeartBeatService heartBeatService = new HeartBeatService(mc);
 	    String openId = "";  
 	    
 	    String socketHost = ((InetSocketAddress)session.getRemoteAddress()).getHostName();
 	    int socketPort = ((InetSocketAddress)session.getRemoteAddress()).getPort();
 	    InetSocketAddress socketAddress = new InetSocketAddress(socketHost, socketPort);
 		System.out.println(socketAddress + " len: " + dataBytes.length);
+		
+//		openId = "11111111111111111111111111111111";
+		mc.set("chat_talk_11111111111111111111111111111111", "22222222222222222222222222222222");
+		mc.set("chat_talk_22222222222222222222222222222222", "11111111111111111111111111111111");
+//		chatService.checkTalk(openId);
+		
 		//当数据包为32个字节时，认为是心跳数据，且数据为openId
 		if(dataBytes.length == 32){
 	        openId = new String(dataBytes, "utf-8");
